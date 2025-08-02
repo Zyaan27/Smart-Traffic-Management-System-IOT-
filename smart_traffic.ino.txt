@@ -1,0 +1,204 @@
+    ARDUINO PROGRAMMING
+//Mohammed Zyaan C////////////////////////
+////cmdzyaan27@gmail.com/////////////
+//8072372498////////////////////////////
+///vellore///////////////////////////////
+#include<TimerOne.h>
+/////////////////////////////////////////////////////////////////
+#include <SoftwareSerial.h>
+
+//-----------------------------------------------------------------------------------
+//Alert reciever's phone number with country code
+const String PHONE_1 = "+918072372498";
+const String PHONE_2 = ""; //optional
+const String PHONE_3 = ""; //optional
+//-----------------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------------
+#define rxPin 2
+#define txPin 3
+SoftwareSerial sim800L(rxPin,txPin);
+#define buzzer_pin A4
+///////////////////////////////
+nt signal1[] = {13, 12, 11};
+int signal2[] = {10, 9, 8};
+int signal3[] = {7, 6, A5};
+int redDelay = 2000;
+int yellowDelay = 2000;
+
+volatile int triggerpin1 = A0;    
+volatile int echopin1 = A1;       
+volatile int triggerpin2 = A2;     
+volatile int echopin2 = A3;        
+volatile int triggerpin3 =4;     
+volatile int echopin3 = 5;       
+int count =0;
+volatile long time;                    // Variable for storing the time traveled
+volatile int S1, S2 ,S3;           // Variables for storing the distance covered
+
+int t = 5;  // distance under which it will look for vehicles.
+
+void setup(){
+  Serial.begin(115200);
+  sim800L.begin(9600);
+  Timer1.initialize(100000);  //Begin using the timer. This function must be called first. "microseconds" is the period of time the timer takes.
+  Timer1.attachInterrupt(softInterr); //Run a function each time the timer period finishes.
+
+  // Declaring LED pins as output
+  for(int i=0; i<2; i++){
+for(int i=0; i<2; i++){
+    pinMode(signal1[i], OUTPUT);
+    pinMode(signal2[i], OUTPUT);
+  }
+
+  // Declaring ultrasonic sensor pins as output
+  pinMode(triggerpin1, OUTPUT);  
+  pinMode(echopin1, INPUT);      
+  pinMode(triggerpin2, OUTPUT);  
+  pinMode(echopin2, INPUT);
+  pinMode(triggerpin3, OUTPUT);  
+  pinMode(echopin3, INPUT);
+  ///////////////////////////////////////////////////////////////////
+  Serial.println("Initializing...");
+  //Once the handshake test is successful, it will back to OK
+  sim800L.println("AT");
+  delay(1000);
+  sim800L.println("AT+CMGF=1");
+  delay(1000);
+  /////////////////////////////////////////////////////////////////
+}
+
+void loop()
+{
+  signal01Function();
+  signal02Function();
+  while(sim800L.available())
+{
+    signal01Function();
+    signal02Function();
+    delay(100);
+    if ((S1 < t ||(S2 < t)) && count == 0) 
+      {
+      Serial.println(sim800L.readString());
+      digitalWrite(buzzer_pin,HIGH);
+      Serial.println("trafic detected...! take action immediately.");
+      send_multi_sms();
+      count=1;
+      
+  }
+ else if(S1 > t && S2 > t && count == 1)
+ {
+  delay(10);
+  Serial.println("count");
+  Serial.println(count);
+  count=0;
+  }
+}
+}
+{
+  // Reading from first ultrasonic sensor
+  digitalWrite(triggerpin1, LOW);  
+  delayMicroseconds(2);
+  digitalWrite(triggerpin1, HIGH); 
+  delayMicroseconds(10);
+  digitalWrite(triggerpin1, LOW);
+  time = pulseIn(echopin1, HIGH); 
+  S1= time*0.034/2;
+
+  // Reading from second ultrasonic sensor
+  digitalWrite(triggerpin2, LOW);  
+  delayMicroseconds(2);
+  digitalWrite(triggerpin2, HIGH); 
+  delayMicroseconds(10);
+  digitalWrite(triggerpin2, LOW);
+  time = pulseIn(echopin2, HIGH); 
+  S2= time*0.034/2;
+ // Reading from second ultrasonic sensor
+  digitalWrite(triggerpin3, LOW);  
+  delayMicroseconds(2);
+  digitalWrite(triggerpin3, HIGH); 
+  delayMicroseconds(10);
+digitalWrite(triggerpin3, LOW);
+  time = pulseIn(echopin3, HIGH); 
+  S3= time*0.034/2;
+
+  // Print distance values on serial monitor for debugging
+ /*Serial.println("S1=");
+   Serial.println(S1);
+  Serial.println("S2=");
+    Serial.println(S2);
+  Serial.println("S3=");
+    Serial.println(S3);
+ */
+}
+
+void zeebra_level ()
+{
+for(int i=0;i<10;++i)
+  {
+   delay(300);
+   if (S3 < 20)
+  {i=0;}
+  }
+}
+void signal01Function()
+{
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
+  Serial.println("01");
+  //low();
+  digitalWrite(signal1[0], LOW);
+  digitalWrite(signal1[2], HIGH);
+  digitalWrite(signal2[0], LOW);
+  digitalWrite(signal2[2], HIGH);
+  delay(5000);
+  digitalWrite(signal1[2], LOW);
+  digitalWrite(signal1[1], HIGH);
+  digitalWrite(signal2[2], LOW);
+  digitalWrite(signal2[1], HIGH);
+  delay(1000);   
+  digitalWrite(signal1[1], LOW);
+  digitalWrite(signal1[0], HIGH);
+  digitalWrite(signal2[1], LOW);
+  digitalWrite(signal2[0], HIGH);
+ }
+
+void signal02Function()
+{   
+  Serial.println("02");
+  //low();
+  digitalWrite(signal3[0], LOW);
+  digitalWrite(signal3[2], HIGH);
+zeebra_level ();
+  digitalWrite(signal3[2], LOW);
+  digitalWrite(signal3[1], HIGH);
+  delay(1000);   
+  digitalWrite(signal3[1], LOW);
+  digitalWrite(signal3[0], HIGH);
+}
+
+// Function to make all LED's LOW except RED one's.
+void send_multi_sms()
+{
+  if(PHONE_1 != ""){
+    Serial.print("Phone 1: ");
+    send_sms(" trafic Detected..! take action immediately.", PHONE_1);
+  }
+}
+//--------------------------
+void send_sms(String text, String phone)
+{
+    Serial.println("sending sms....");
+    delay(50);
+    sim800L.print("AT+CMGF=1\r");
+    delay(1000);
+    sim800L.print("AT+CMGS=\""+phone+"\"\r");
+    delay(1000);
+    sim800L.print(text);
+    delay(100);
+sim800L.write(0x1A); //ascii code for ctrl-26 //Serial2.println((char)26); //ascii code for ctrl-26
+    delay(3000);
+    count++;
+    Serial.println("count");
+    Serial.println(count);
+}
